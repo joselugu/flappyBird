@@ -2,148 +2,227 @@ package com.proyecto.flappybird;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Rectangle;
 
 import java.util.Random;
 
+
 public class FlappyBirdGame extends ApplicationAdapter {
-    private SpriteBatch batch;
-    private Texture background;
-    private Texture[] birdFrames;
-    private Texture tubeTop;
-    private Texture tubeBottom;
+    SpriteBatch batch;
+    Texture background;
 
-    private float birdX;
-    private float birdY;
-    private float birdVelocity = 2f;
-    private final float gravity = 3f;
-    private final int birdWidth = 50;
-    private final int birdHeight = 50;
+    Texture gameover;
 
-    private int gameState = 0;
-    private int score = 0;
-    private int scoringTube = 0;
+    Texture[] birds;
+    int flapState = 0;
+    float birdY = 0;
+    float velocity = 0;
+    Circle birdCircle;
+    int score = 0;
+    int scoringTube = 0;
+    BitmapFont font;
 
-    private float[] tubesX = new float[4];
-    private float[] tubesOffset = new float[4];
-    private final int tubeWidth = 100;
-    private final int gap = 400;
-    private final float tubeVelocity = 4f;
+    int gameState = 0;
+    float gravity = 2;
 
-    private int frameCount = 0;
-    private Rectangle birdRectangle;
-    private Rectangle[] topTubeRectangles = new Rectangle[4];
-    private Rectangle[] bottomTubeRectangles = new Rectangle[4];
+    Texture topTube;
+    Texture bottomTube;
+    float gap = 400;
+    float maxTubeOffset;
+    Random randomGenerator;
+    float tubeVelocity = 4;
+    int numberOfTubes = 4;
+    float[] tubeX = new float[numberOfTubes];
+    float[] tubeOffset = new float[numberOfTubes];
+    float distanceBetweenTubes;
+    Rectangle[] topTubeRectangles;
+    Rectangle[] bottomTubeRectangles;
 
-    private float tubeSpawnTime = 0;
-    private final float tubeSpawnInterval = 1.2f; // Genera tuberías cada 3 segundos
+
 
     @Override
-    public void create() {
+    public void create () {
         batch = new SpriteBatch();
         background = new Texture("background.png");
-        birdFrames = new Texture[]{
-            new Texture("pajaro1.png"),
-            new Texture("pajaro2.png")
-        };
-        tubeTop = new Texture("tuberia_arriba.png");
-        tubeBottom = new Texture("tuberia_abajo.png");
+        gameover = new Texture("gameover.png");
+        //shapeRenderer = new ShapeRenderer();
+        birdCircle = new Circle();
+        font = new BitmapFont();
+        font.setColor(Color.WHITE);
+        font.getData().setScale(10);
 
-        birdX = Gdx.graphics.getWidth() / 4f - birdWidth / 2f;
-        birdY = Gdx.graphics.getHeight() / 2f;
-        birdRectangle = new Rectangle();
+        birds = new Texture[2];
+        birds[0] = new Texture("pajaro1.png");
+        birds[1] = new Texture("pajaro2.png");
 
-        int screenWidth = Gdx.graphics.getWidth();
-        int screenHeight = Gdx.graphics.getHeight();
-        Random random = new Random();
 
-        // Ajustamos la posición de las tuberías
-        for (int i = 0; i < tubesX.length; i++) {
-            tubesX[i] = screenWidth / 2f + i * (screenWidth / 2f); // Ubicación horizontal
-        }
+        topTube = new Texture("tuberia_arriba.png");
+        bottomTube = new Texture("tuberia_abajo.png");
+        maxTubeOffset = Gdx.graphics.getHeight() / 2 - gap / 2 - 100;
+        randomGenerator = new Random();
+        distanceBetweenTubes = Gdx.graphics.getWidth() * 3 / 4;
+        topTubeRectangles = new Rectangle[numberOfTubes];
+        bottomTubeRectangles = new Rectangle[numberOfTubes];
 
-        topTubeRectangles = new Rectangle[4];
-        bottomTubeRectangles = new Rectangle[4];
-        for (int i = 0; i < tubesX.length; i++) {
+
+        startGame();
+
+
+
+
+
+    }
+
+    public void startGame() {
+
+        birdY = Gdx.graphics.getHeight() / 2 - birds[0].getHeight() / 2;
+
+        for (int i = 0; i < numberOfTubes; i++) {
+
+            tubeOffset[i] = (randomGenerator.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - gap - 200);
+
+            tubeX[i] = Gdx.graphics.getWidth() / 2 - topTube.getWidth() / 2 + Gdx.graphics.getWidth() + i * distanceBetweenTubes;
+
             topTubeRectangles[i] = new Rectangle();
             bottomTubeRectangles[i] = new Rectangle();
+
         }
+
     }
 
     @Override
-    public void render() {
-        frameCount++;
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    public void render () {
 
         batch.begin();
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // Generar nuevas tuberías cada 3 segundos
-        tubeSpawnTime += Gdx.graphics.getDeltaTime();
-        if (tubeSpawnTime >= tubeSpawnInterval) {
-            tubeSpawnTime = 0;  // Reiniciar el temporizador para generar la próxima tubería
-
-            // Reposicionar las tuberías fuera de la pantalla si han salido
-            for (int i = 0; i < tubesX.length; i++) {
-                if (tubesX[i] < -tubeWidth) {
-                    tubesX[i] = Gdx.graphics.getWidth();  // Colocar la tubería al borde derecho
-
-                    // Generar un hueco aleatorio para las tuberías
-                    tubesOffset[i] = (new Random().nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - gap - 100);  // Controla el tamaño del hueco
-                }
-            }
-        }
-
-        // Dibujamos las tuberías
-        for (int i = 0; i < tubesX.length; i++) {
-            tubesX[i] -= tubeVelocity + 10;  // Mover las tuberías a la izquierda
-
-            // Tubería superior
-            batch.draw(tubeTop, tubesX[i], Gdx.graphics.getHeight() / 2f + gap / 2f + tubesOffset[i]);
-
-            // Tubería inferior
-            batch.draw(tubeBottom, tubesX[i], Gdx.graphics.getHeight() / 2f - gap / 2f - tubeBottom.getHeight() + tubesOffset[i]);
-
-            // Actualizamos las posiciones de las colisiones
-            topTubeRectangles[i].set(tubesX[i], Gdx.graphics.getHeight() / 2f + gap / 2f + tubesOffset[i], tubeTop.getWidth(), tubeTop.getHeight());
-            bottomTubeRectangles[i].set(tubesX[i], Gdx.graphics.getHeight() / 2f - gap / 2f - tubeBottom.getHeight() + tubesOffset[i], tubeBottom.getWidth(), tubeBottom.getHeight());
-        }
-
-        // Animar el pájaro
-        Texture currentBirdFrame = birdFrames[(frameCount / 10) % 2];
-        batch.draw(currentBirdFrame, birdX, birdY, birdWidth, birdHeight);
-        birdRectangle.set(birdX, birdY, birdWidth, birdHeight);
-
-        // Lógica del juego
         if (gameState == 1) {
-            birdVelocity += gravity;
-            birdY -= birdVelocity;
 
-            // Colisiones con las tuberías
-            for (int i = 0; i < tubesX.length; i++) {
-                if (Intersector.overlaps(birdRectangle, topTubeRectangles[i]) || Intersector.overlaps(birdRectangle, bottomTubeRectangles[i])) {
-                    gameState = 2; // Fin del juego si colisiona
+            if (tubeX[scoringTube] < Gdx.graphics.getWidth() / 2) {
+
+                score++;
+
+                Gdx.app.log("Score", String.valueOf(score));
+
+                if (scoringTube < numberOfTubes - 1) {
+
+                    scoringTube++;
+
+                } else {
+
+                    scoringTube = 0;
+
                 }
+
             }
 
-            if (birdY <= 0) {
-                gameState = 2; // Si el pájaro toca el suelo, el juego termina
+            if (Gdx.input.justTouched()) {
+
+                velocity = -30;
+
             }
-        } else if (gameState == 0 && Gdx.input.justTouched()) {
-            gameState = 1; // Iniciar el juego si se toca la pantalla
+
+            for (int i = 0; i < numberOfTubes; i++) {
+
+                if (tubeX[i] < - topTube.getWidth()) {
+
+                    tubeX[i] += numberOfTubes * distanceBetweenTubes;
+                    tubeOffset[i] = (randomGenerator.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - gap - 200);
+
+                } else {
+
+                    tubeX[i] = tubeX[i] - tubeVelocity;
+
+
+
+                }
+
+                batch.draw(topTube, tubeX[i], Gdx.graphics.getHeight() / 2 + gap / 2 + tubeOffset[i]);
+                batch.draw(bottomTube, tubeX[i], Gdx.graphics.getHeight() / 2 - gap / 2 - bottomTube.getHeight() + tubeOffset[i]);
+
+                topTubeRectangles[i] = new Rectangle(tubeX[i], Gdx.graphics.getHeight() / 2 + gap / 2 + tubeOffset[i], topTube.getWidth(), topTube.getHeight());
+                bottomTubeRectangles[i] = new Rectangle(tubeX[i], Gdx.graphics.getHeight() / 2 - gap / 2 - bottomTube.getHeight() + tubeOffset[i], bottomTube.getWidth(), bottomTube.getHeight());
+            }
+
+
+
+            if (birdY > 0) {
+
+                velocity = velocity + gravity;
+                birdY -= velocity;
+
+            } else {
+
+                gameState = 2;
+
+            }
+
+        } else if (gameState == 0) {
+
+            if (Gdx.input.justTouched()) {
+
+                gameState = 1;
+
+
+            }
+
+        } else if (gameState == 2) {
+
+            batch.draw(gameover, Gdx.graphics.getWidth() / 2 - gameover.getWidth() / 2, Gdx.graphics.getHeight() / 2 - gameover.getHeight() / 2);
+
+            if (Gdx.input.justTouched()) {
+
+                gameState = 1;
+                startGame();
+                score = 0;
+                scoringTube = 0;
+                velocity = 0;
+
+
+            }
+
         }
 
-        // Salto del pájaro
-        if (gameState == 1 && Gdx.input.justTouched()) {
-            birdVelocity = -30f;
+        if (flapState == 0) {
+            flapState = 1;
+        } else {
+            flapState = 0;
+        }
+
+
+
+        batch.draw(birds[flapState], Gdx.graphics.getWidth() / 2 - birds[flapState].getWidth() / 2, birdY);
+
+        font.draw(batch, String.valueOf(score), 100, 200);
+
+        birdCircle.set(Gdx.graphics.getWidth() / 2, birdY + birds[flapState].getHeight() / 2, birds[flapState].getWidth() / 2);
+
+
+        for (int i = 0; i < numberOfTubes; i++) {
+
+
+            if (Intersector.overlaps(birdCircle, topTubeRectangles[i]) || Intersector.overlaps(birdCircle, bottomTubeRectangles[i])) {
+
+                gameState = 2;
+
+            }
+
         }
 
         batch.end();
+
+
+
     }
+
+
 }
-
-
