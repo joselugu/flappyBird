@@ -3,226 +3,180 @@ package com.proyecto.flappybird;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
 
 import java.util.Random;
 
-
 public class FlappyBirdGame extends ApplicationAdapter {
-    SpriteBatch batch;
-    Texture background;
+    // Variables para el dibujo de la interfaz gráfica
+    SpriteBatch loteSprites;
+    Texture fondo;
+    Texture finJuego;
 
-    Texture gameover;
+    // Variables para el pájaro
+    Texture[] pajaro;
+    int estadoAleteo = 0; // Indica si el pájaro está aleteando o no
+    float posYPajaro = 0; // Posición vertical del pájaro
+    float velocidad = 0; // Velocidad de caída del pájaro
+    Circle circuloPajaro; // Círculo para detectar colisiones del pájaro
+    int puntuacion = 0; // Puntuación actual
+    int tuboPuntuacion = 0; // Controla cuál tubo se está usando para puntuar
+    BitmapFont fuente; // Fuente para dibujar la puntuación
 
-    Texture[] birds;
-    int flapState = 0;
-    float birdY = 0;
-    float velocity = 0;
-    Circle birdCircle;
-    int score = 0;
-    int scoringTube = 0;
-    BitmapFont font;
+    // Estado del juego: 0 - esperando, 1 - jugando, 2 - fin del juego
+    int estadoJuego = 0;
+    float gravedad = 2; // Gravedad que afecta al pájaro
 
-    int gameState = 0;
-    float gravity = 2;
-
-    Texture topTube;
-    Texture bottomTube;
-    float gap = 400;
-    float maxTubeOffset;
-    Random randomGenerator;
-    float tubeVelocity = 4;
-    int numberOfTubes = 4;
-    float[] tubeX = new float[numberOfTubes];
-    float[] tubeOffset = new float[numberOfTubes];
-    float distanceBetweenTubes;
-    Rectangle[] topTubeRectangles;
-    Rectangle[] bottomTubeRectangles;
-
-
+    // Variables para los tubos
+    Texture tuboArriba;
+    Texture tuboAbajo;
+    float espacioTuberias = 600; // Espacio entre el tubo superior e inferior
+    float desplazamientoMaxTubo; // Máximo desplazamiento del tubo en el eje Y
+    Random generadorAleatorio; // Generador de números aleatorios para posicionar los tubos
+    float velocidadTubo = 5; // Velocidad de movimiento de los tubos
+    int cantidadTuberias = 4; // Cantidad de tubos visibles en pantalla
+    float[] posXTuberias = new float[cantidadTuberias]; // Posiciones en X de los tubos
+    float[] desplazamientoTuberias = new float[cantidadTuberias]; // Desplazamiento de cada tubo en el eje Y
+    float distanciaEntreTuberias; // Distancia entre cada par de tubos
+    Rectangle[] rectangulosTuboArriba; // Rectángulos para detectar colisiones con el tubo superior
+    Rectangle[] rectangulosTuboAbajo; // Rectángulos para detectar colisiones con el tubo inferior
 
     @Override
     public void create () {
-        batch = new SpriteBatch();
-        background = new Texture("background.png");
-        gameover = new Texture("gameover.png");
-        //shapeRenderer = new ShapeRenderer();
-        birdCircle = new Circle();
-        font = new BitmapFont();
-        font.setColor(Color.WHITE);
-        font.getData().setScale(10);
+        // Inicialización de objetos gráficos
+        loteSprites = new SpriteBatch();
+        fondo = new Texture("background.png"); // Imagen de fondo
+        finJuego = new Texture("gameover.png"); // Imagen de fin de juego
+        circuloPajaro = new Circle(); // Círculo para la detección de colisiones
+        fuente = new BitmapFont(); // Fuente para la puntuación
+        fuente.setColor(Color.WHITE); // Color blanco para la puntuación
+        fuente.getData().setScale(10); // Tamaño de la fuente
 
-        birds = new Texture[2];
-        birds[0] = new Texture("pajaro1.png");
-        birds[1] = new Texture("pajaro2.png");
+        // Inicialización de las texturas de los pájaros
+        pajaro = new Texture[2];
+        pajaro[0] = new Texture("pajaro1.png");
+        pajaro[1] = new Texture("pajaro2.png");
 
+        // Inicialización de los tubos
+        tuboArriba = new Texture("tuberia_arriba.png");
+        tuboAbajo = new Texture("tuberia_abajo.png");
+        desplazamientoMaxTubo = Gdx.graphics.getHeight() / 2 - espacioTuberias / 2 - 100; // Ajuste de la altura máxima de los tubos
+        generadorAleatorio = new Random(); // Inicializa el generador aleatorio
+        distanciaEntreTuberias = Gdx.graphics.getWidth() * 3 / 4; // Distancia entre tubos
+        rectangulosTuboArriba = new Rectangle[cantidadTuberias];
+        rectangulosTuboAbajo = new Rectangle[cantidadTuberias];
 
-        topTube = new Texture("tuberia_arriba.png");
-        bottomTube = new Texture("tuberia_abajo.png");
-        maxTubeOffset = Gdx.graphics.getHeight() / 2 - gap / 2 - 100;
-        randomGenerator = new Random();
-        distanceBetweenTubes = Gdx.graphics.getWidth() * 3 / 4;
-        topTubeRectangles = new Rectangle[numberOfTubes];
-        bottomTubeRectangles = new Rectangle[numberOfTubes];
-
-
-        startGame();
-
-
-
-
-
+        iniciarJuego(); // Inicializa el estado del juego
     }
 
-    public void startGame() {
+    // Función que inicializa la posición del pájaro y los tubos
+    public void iniciarJuego() {
+        posYPajaro = Gdx.graphics.getHeight() / 2 - pajaro[0].getHeight() / 2; // Inicializa el pájaro en el centro vertical
 
-        birdY = Gdx.graphics.getHeight() / 2 - birds[0].getHeight() / 2;
-
-        for (int i = 0; i < numberOfTubes; i++) {
-
-            tubeOffset[i] = (randomGenerator.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - gap - 200);
-
-            tubeX[i] = Gdx.graphics.getWidth() / 2 - topTube.getWidth() / 2 + Gdx.graphics.getWidth() + i * distanceBetweenTubes;
-
-            topTubeRectangles[i] = new Rectangle();
-            bottomTubeRectangles[i] = new Rectangle();
-
+        // Posiciona las tuberías
+        for (int i = 0; i < cantidadTuberias; i++) {
+            desplazamientoTuberias[i] = (generadorAleatorio.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - espacioTuberias - 200); // Ajusta la posición aleatoria de los tubos en Y
+            posXTuberias[i] = Gdx.graphics.getWidth() / 2 - tuboArriba.getWidth() / 2 + Gdx.graphics.getWidth() + i * distanciaEntreTuberias; // Ajusta la posición inicial de los tubos
+            rectangulosTuboArriba[i] = new Rectangle(); // Crea el rectángulo para el tubo superior
+            rectangulosTuboAbajo[i] = new Rectangle(); // Crea el rectángulo para el tubo inferior
         }
-
     }
 
     @Override
     public void render () {
+        loteSprites.begin(); // Comienza el renderizado de los elementos gráficos
 
-        batch.begin();
-        batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // Dibuja el fondo en pantalla
+        loteSprites.draw(fondo, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        if (gameState == 1) {
+        // Si el juego está en el estado "jugando"
+        if (estadoJuego == 1) {
 
-            if (tubeX[scoringTube] < Gdx.graphics.getWidth() / 2) {
-
-                score++;
-
-                Gdx.app.log("Score", String.valueOf(score));
-
-                if (scoringTube < numberOfTubes - 1) {
-
-                    scoringTube++;
-
+            // Lógica para aumentar la puntuación cuando el pájaro pasa por un tubo
+            if (posXTuberias[tuboPuntuacion] < Gdx.graphics.getWidth() / 2) {
+                puntuacion++; // Aumenta la puntuación
+                Gdx.app.log("Puntuación", String.valueOf(puntuacion)); // Muestra la puntuación en los logs
+                if (tuboPuntuacion < cantidadTuberias - 1) {
+                    tuboPuntuacion++; // Si no es el último tubo, pasa al siguiente
                 } else {
-
-                    scoringTube = 0;
-
+                    tuboPuntuacion = 0; // Si es el último tubo, vuelve al primero
                 }
-
             }
 
+            // Controla el salto del pájaro cuando el jugador toca la pantalla
             if (Gdx.input.justTouched()) {
-
-                velocity = -30;
-
+                velocidad = -30; // Establece una velocidad negativa para el salto del pájaro
             }
 
-            for (int i = 0; i < numberOfTubes; i++) {
-
-                if (tubeX[i] < - topTube.getWidth()) {
-
-                    tubeX[i] += numberOfTubes * distanceBetweenTubes;
-                    tubeOffset[i] = (randomGenerator.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - gap - 200);
-
+            // Mueve y dibuja los tubos
+            for (int i = 0; i < cantidadTuberias; i++) {
+                // Si el tubo ya ha pasado la pantalla, lo reposiciona al final
+                if (posXTuberias[i] < -tuboArriba.getWidth()) {
+                    posXTuberias[i] += cantidadTuberias * distanciaEntreTuberias;
+                    desplazamientoTuberias[i] = (generadorAleatorio.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - espacioTuberias - 200);
                 } else {
-
-                    tubeX[i] = tubeX[i] - tubeVelocity;
-
-
-
+                    posXTuberias[i] = posXTuberias[i] - velocidadTubo; // Mueve los tubos hacia la izquierda
                 }
 
-                batch.draw(topTube, tubeX[i], Gdx.graphics.getHeight() / 2 + gap / 2 + tubeOffset[i]);
-                batch.draw(bottomTube, tubeX[i], Gdx.graphics.getHeight() / 2 - gap / 2 - bottomTube.getHeight() + tubeOffset[i]);
+                // Dibuja los tubos en pantalla
+                loteSprites.draw(tuboArriba, posXTuberias[i], Gdx.graphics.getHeight() / 2 + espacioTuberias / 2 + desplazamientoTuberias[i]);
+                loteSprites.draw(tuboAbajo, posXTuberias[i], Gdx.graphics.getHeight() / 2 - espacioTuberias / 2 - tuboAbajo.getHeight() + desplazamientoTuberias[i]);
 
-                topTubeRectangles[i] = new Rectangle(tubeX[i], Gdx.graphics.getHeight() / 2 + gap / 2 + tubeOffset[i], topTube.getWidth(), topTube.getHeight());
-                bottomTubeRectangles[i] = new Rectangle(tubeX[i], Gdx.graphics.getHeight() / 2 - gap / 2 - bottomTube.getHeight() + tubeOffset[i], bottomTube.getWidth(), bottomTube.getHeight());
+                // Actualiza los rectángulos de los tubos para detectar colisiones
+                rectangulosTuboArriba[i] = new Rectangle(posXTuberias[i], Gdx.graphics.getHeight() / 2 + espacioTuberias / 2 + desplazamientoTuberias[i], tuboArriba.getWidth(), tuboArriba.getHeight());
+                rectangulosTuboAbajo[i] = new Rectangle(posXTuberias[i], Gdx.graphics.getHeight() / 2 - espacioTuberias / 2 - tuboAbajo.getHeight() + desplazamientoTuberias[i], tuboAbajo.getWidth(), tuboAbajo.getHeight());
             }
 
-
-
-            if (birdY > 0) {
-
-                velocity = velocity + gravity;
-                birdY -= velocity;
-
+            // Actualiza la física del pájaro
+            if (posYPajaro > 0) {
+                velocidad = velocidad + gravedad; // Aplica la gravedad
+                posYPajaro -= velocidad; // Mueve al pájaro hacia abajo
             } else {
-
-                gameState = 2;
-
+                estadoJuego = 2; // Si el pájaro toca el suelo, termina el juego
             }
 
-        } else if (gameState == 0) {
+        } else if (estadoJuego == 0) { // Si el juego está esperando a que empiece
+            if (Gdx.input.justTouched()) {
+                estadoJuego = 1; // Comienza el juego
+            }
+
+        } else if (estadoJuego == 2) { // Si el juego terminó
+            loteSprites.draw(finJuego, Gdx.graphics.getWidth() / 2 - finJuego.getWidth() / 2, Gdx.graphics.getHeight() / 2 - finJuego.getHeight() / 2);
 
             if (Gdx.input.justTouched()) {
-
-                gameState = 1;
-
-
+                estadoJuego = 1; // Reinicia el juego al tocar la pantalla
+                iniciarJuego(); // Inicializa nuevamente el juego
+                puntuacion = 0; // Resetea la puntuación
+                tuboPuntuacion = 0; // Resetea el contador de tubos
+                velocidad = 0; // Resetea la velocidad
             }
-
-        } else if (gameState == 2) {
-
-            batch.draw(gameover, Gdx.graphics.getWidth() / 2 - gameover.getWidth() / 2, Gdx.graphics.getHeight() / 2 - gameover.getHeight() / 2);
-
-            if (Gdx.input.justTouched()) {
-
-                gameState = 1;
-                startGame();
-                score = 0;
-                scoringTube = 0;
-                velocity = 0;
-
-
-            }
-
         }
 
-        if (flapState == 0) {
-            flapState = 1;
+        // Alterna entre los dos estados del pájaro para simular el aleteo
+        if (estadoAleteo == 0) {
+            estadoAleteo = 1;
         } else {
-            flapState = 0;
+            estadoAleteo = 0;
         }
 
+        // Dibuja el pájaro
+        loteSprites.draw(pajaro[estadoAleteo], Gdx.graphics.getWidth() / 2 - pajaro[estadoAleteo].getWidth() / 2, posYPajaro);
+        fuente.draw(loteSprites, String.valueOf(puntuacion), 100, 200); // Muestra la puntuación en pantalla
 
+        // Actualiza la posición del círculo del pájaro para detectar colisiones
+        circuloPajaro.set(Gdx.graphics.getWidth() / 2, posYPajaro + pajaro[estadoAleteo].getHeight() / 2, pajaro[estadoAleteo].getWidth() / 2);
 
-        batch.draw(birds[flapState], Gdx.graphics.getWidth() / 2 - birds[flapState].getWidth() / 2, birdY);
-
-        font.draw(batch, String.valueOf(score), 100, 200);
-
-        birdCircle.set(Gdx.graphics.getWidth() / 2, birdY + birds[flapState].getHeight() / 2, birds[flapState].getWidth() / 2);
-
-
-        for (int i = 0; i < numberOfTubes; i++) {
-
-
-            if (Intersector.overlaps(birdCircle, topTubeRectangles[i]) || Intersector.overlaps(birdCircle, bottomTubeRectangles[i])) {
-
-                gameState = 2;
-
+        // Detecta colisiones con los tubos
+        for (int i = 0; i < cantidadTuberias; i++) {
+            if (Intersector.overlaps(circuloPajaro, rectangulosTuboArriba[i]) || Intersector.overlaps(circuloPajaro, rectangulosTuboAbajo[i])) {
+                estadoJuego = 2; // Si hay colisión, termina el juego
             }
-
         }
-
-        batch.end();
-
-
-
+        loteSprites.end(); // Finaliza el renderizado de los elementos gráficos
     }
-
-
 }
