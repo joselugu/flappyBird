@@ -62,7 +62,6 @@ public class FlappyBirdGame extends ApplicationAdapter {
         pajaro[0] = new Texture("pajaro1.png");
         pajaro[1] = new Texture("pajaro2.png");
 
-
         // Inicialización de los tubos
         tuboArriba = new Texture("tuberia_arriba.png");
         tuboAbajo = new Texture("tuberia_abajo.png");
