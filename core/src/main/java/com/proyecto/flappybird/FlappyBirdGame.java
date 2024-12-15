@@ -20,7 +20,7 @@ public class FlappyBirdGame extends ApplicationAdapter {
 
     // Variables para el pájaro
     Texture[] pajaro;
-    int estadoAleteo = 0; // Indica si el pájaro está aleteando o no
+    int estadoAleteo = 0; // Indica si el pájaro está aleteando
     float posYPajaro = 0; // Posición vertical del pájaro
     float velocidad = 0; // Velocidad de caída del pájaro
     Circle circuloPajaro; // Círculo para detectar colisiones del pájaro
@@ -54,8 +54,8 @@ public class FlappyBirdGame extends ApplicationAdapter {
         finJuego = new Texture("gameover.png"); // Imagen de fin de juego
         circuloPajaro = new Circle(); // Círculo para la detección de colisiones
         fuente = new BitmapFont(); // Fuente para la puntuación
-        fuente.setColor(Color.WHITE); // Color blanco para la puntuación
-        fuente.getData().setScale(10); // Tamaño de la fuente
+        fuente.setColor(Color.RED); // Color blanco para la puntuación
+        fuente.getData().setScale(7); // Tamaño de la fuente
 
         // Inicialización de las texturas de los pájaros
         pajaro = new Texture[2];
@@ -133,12 +133,13 @@ public class FlappyBirdGame extends ApplicationAdapter {
             }
 
             // Actualiza la física del pájaro
-            if (posYPajaro > 0) {
+            if (posYPajaro > 0 && posYPajaro + pajaro[estadoAleteo].getHeight() < Gdx.graphics.getHeight()) {
                 velocidad = velocidad + gravedad; // Aplica la gravedad
                 posYPajaro -= velocidad; // Mueve al pájaro hacia abajo
             } else {
-                estadoJuego = 2; // Si el pájaro toca el suelo, termina el juego
+                estadoJuego = 2; // Termina el juego si toca el suelo o el techo
             }
+
 
         } else if (estadoJuego == 0) { // Si el juego está esperando a que empiece
             if (Gdx.input.justTouched()) {
