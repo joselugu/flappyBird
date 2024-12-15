@@ -2,6 +2,7 @@ package com.proyecto.flappybird;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -13,6 +14,9 @@ import com.badlogic.gdx.math.Rectangle;
 import java.util.Random;
 
 public class FlappyBirdGame extends ApplicationAdapter {
+    //Variables para las preferencias(puntuacion)
+    Preferences preferencias;
+
     // Variables para el dibujo de la interfaz gráfica
     SpriteBatch loteSprites;
     Texture fondo;
@@ -26,6 +30,7 @@ public class FlappyBirdGame extends ApplicationAdapter {
     Circle circuloPajaro; // Círculo para detectar colisiones del pájaro
     int puntuacion = 0; // Puntuación actual
     int tuboPuntuacion = 0; // Controla cuál tubo se está usando para puntuar
+    int mejorPuntuacion = 0; //Puntuacion mas alta
     BitmapFont fuente; // Fuente para dibujar la puntuación
 
     // Estado del juego: 0 - esperando, 1 - jugando, 2 - fin del juego
@@ -48,6 +53,12 @@ public class FlappyBirdGame extends ApplicationAdapter {
 
     @Override
     public void create () {
+        //Inicializacion de la puntuacion
+        preferencias = Gdx.app.getPreferences("FlappyBirdPreferencias");
+        mejorPuntuacion = preferencias.getInteger("mejorPuntuacion", 0);
+
+
+
         // Inicialización de objetos gráficos
         loteSprites = new SpriteBatch();
         fondo = new Texture("background.png"); // Imagen de fondo
@@ -55,7 +66,7 @@ public class FlappyBirdGame extends ApplicationAdapter {
         circuloPajaro = new Circle(); // Círculo para la detección de colisiones
         fuente = new BitmapFont(); // Fuente para la puntuación
         fuente.setColor(Color.RED); // Color blanco para la puntuación
-        fuente.getData().setScale(7); // Tamaño de la fuente
+        fuente.getData().setScale(6); // Tamaño de la fuente
 
         // Inicialización de las texturas de los pájaros
         pajaro = new Texture[2];
@@ -148,6 +159,20 @@ public class FlappyBirdGame extends ApplicationAdapter {
 
         } else if (estadoJuego == 2) { // Si el juego terminó
             loteSprites.draw(finJuego, Gdx.graphics.getWidth() / 2 - finJuego.getWidth() / 2, Gdx.graphics.getHeight() / 2 - finJuego.getHeight() / 2);
+
+            // Comparar puntuación actual con la mejor puntuación
+            if (puntuacion > mejorPuntuacion) {
+                mejorPuntuacion = puntuacion;
+                preferencias.putInteger("mejorPuntuacion", mejorPuntuacion); // Guardar la mejor puntuación
+                preferencias.flush(); // Confirmar el guardado
+            }
+
+
+            // Mostrar puntuación actual y mejor puntuación
+            fuente.draw(loteSprites, "Record: " + mejorPuntuacion, 360, 1850);
+            fuente.draw(loteSprites, "Puntos: " + puntuacion, 380, 1700);
+
+
 
             if (Gdx.input.justTouched()) {
                 estadoJuego = 1; // Reinicia el juego al tocar la pantalla
