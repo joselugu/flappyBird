@@ -1,1 +1,1 @@
-[Descargar APK](./core/flappyBirdClone.apk)
+[Descargar APK](./core/FlappyBirdClone.apk)
