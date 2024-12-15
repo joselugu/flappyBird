@@ -55,7 +55,7 @@ public class FlappyBirdGame extends ApplicationAdapter {
     float espacioTuberias = 600; // Espacio entre el tubo superior e inferior
     float desplazamientoMaxTubo; // Máximo desplazamiento del tubo en el eje Y
     Random generadorAleatorio; // Generador de números aleatorios para posicionar los tubos
-    float velocidadTubo = 5; // Velocidad de movimiento de los tubos
+    float velocidadTubo = 6.2F; // Velocidad de movimiento de los tubos
     int cantidadTuberias = 4; // Cantidad de tubos visibles en pantalla
     float[] posXTuberias = new float[cantidadTuberias]; // Posiciones en X de los tubos
     float[] desplazamientoTuberias = new float[cantidadTuberias]; // Desplazamiento de cada tubo en el eje Y
