@@ -45,6 +45,7 @@ public class FlappyBirdGame extends ApplicationAdapter {
     int mejorPuntuacion = 0; //Puntuacion mas alta
     BitmapFont fuente; // Fuente para dibujar la puntuación
 
+
     // Estado del juego: 0 - esperando, 1 - jugando, 2 - fin del juego
     int estadoJuego = 0;
     float gravedad = 2; // Gravedad que afecta al pájaro
