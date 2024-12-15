@@ -10,12 +10,24 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.utils.Timer;
+
 
 import java.util.Random;
 
 public class FlappyBirdGame extends ApplicationAdapter {
     //Variables para las preferencias(puntuacion)
     Preferences preferencias;
+
+
+
+    Sound sonidoSalto;
+    Sound sonidoPuntuacion;
+    Sound sonidoMuerte;
+    boolean sonidoMuerteReproducido = false;
+
+
 
     // Variables para el dibujo de la interfaz gráfica
     SpriteBatch loteSprites;
@@ -53,6 +65,12 @@ public class FlappyBirdGame extends ApplicationAdapter {
 
     @Override
     public void create () {
+
+        sonidoSalto = Gdx.audio.newSound(Gdx.files.internal("pulsar.ogg"));
+        sonidoPuntuacion = Gdx.audio.newSound(Gdx.files.internal("pasartubo.ogg"));
+        sonidoMuerte = Gdx.audio.newSound(Gdx.files.internal("mamamia.mp3"));
+
+
         //Inicializacion de la puntuacion
         preferencias = Gdx.app.getPreferences("FlappyBirdPreferencias");
         mejorPuntuacion = preferencias.getInteger("mejorPuntuacion", 0);
@@ -100,6 +118,8 @@ public class FlappyBirdGame extends ApplicationAdapter {
 
     @Override
     public void render () {
+
+
         loteSprites.begin(); // Comienza el renderizado de los elementos gráficos
 
         // Dibuja el fondo en pantalla
@@ -111,6 +131,7 @@ public class FlappyBirdGame extends ApplicationAdapter {
             // Lógica para aumentar la puntuación cuando el pájaro pasa por un tubo
             if (posXTuberias[tuboPuntuacion] < Gdx.graphics.getWidth() / 2) {
                 puntuacion++; // Aumenta la puntuación
+                sonidoPuntuacion.play();
                 Gdx.app.log("Puntuación", String.valueOf(puntuacion)); // Muestra la puntuación en los logs
                 if (tuboPuntuacion < cantidadTuberias - 1) {
                     tuboPuntuacion++; // Si no es el último tubo, pasa al siguiente
@@ -121,7 +142,8 @@ public class FlappyBirdGame extends ApplicationAdapter {
 
             // Controla el salto del pájaro cuando el jugador toca la pantalla
             if (Gdx.input.justTouched()) {
-                velocidad = -30; // Establece una velocidad negativa para el salto del pájaro
+                velocidad = -30;// Establece una velocidad negativa para el salto del pájaro
+                sonidoSalto.play();
             }
 
             // Mueve y dibuja los tubos
@@ -158,6 +180,12 @@ public class FlappyBirdGame extends ApplicationAdapter {
             }
 
         } else if (estadoJuego == 2) { // Si el juego terminó
+            if (!sonidoMuerteReproducido) {
+                sonidoMuerte.play(); // Reproducir sonido de muerte
+                sonidoMuerteReproducido = true;  // Marcar que el sonido ya ha sido reproducido
+            }
+
+
             loteSprites.draw(finJuego, Gdx.graphics.getWidth() / 2 - finJuego.getWidth() / 2, Gdx.graphics.getHeight() / 2 - finJuego.getHeight() / 2);
 
             // Comparar puntuación actual con la mejor puntuación
@@ -180,6 +208,8 @@ public class FlappyBirdGame extends ApplicationAdapter {
                 puntuacion = 0; // Resetea la puntuación
                 tuboPuntuacion = 0; // Resetea el contador de tubos
                 velocidad = 0; // Resetea la velocidad
+                sonidoMuerteReproducido = false; // Reinicia el estado para reproducir el sonido en la siguiente muerte
+
             }
         }
 
@@ -201,8 +231,16 @@ public class FlappyBirdGame extends ApplicationAdapter {
         for (int i = 0; i < cantidadTuberias; i++) {
             if (Intersector.overlaps(circuloPajaro, rectangulosTuboArriba[i]) || Intersector.overlaps(circuloPajaro, rectangulosTuboAbajo[i])) {
                 estadoJuego = 2; // Si hay colisión, termina el juego
+
             }
         }
         loteSprites.end(); // Finaliza el renderizado de los elementos gráficos
+    }
+    @Override
+    public void dispose() {
+        sonidoSalto.dispose(); // Libera el sonido del salto
+        sonidoPuntuacion.dispose(); // Libera el sonido de puntuación
+        sonidoMuerte.dispose(); // Libera el sonido de fin de juego
+
     }
 }
